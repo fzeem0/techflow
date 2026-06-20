@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+#-----> set -e ---> exit on error 
+#-----> set -u ---> typo or not specified variable problem
+#-----> set -o pipefail ----> reporter it tells error so all of them just for safe coding 
+
+set -euo pipefail 
+
+#--- so colors \033--> gives commands so its send an escape character to the terminal 
+#---- [ ----> start color command
+#----> 0 ---> norman style 
+#-----> 32 ----> green 
+#-----> 31 ----> red
+#----> m --> finish command 
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+#---its global inidcator for specifically health checking if no fail it prints 0
+ANY_FAIL=0
+
+#---> we need check status is become function later it can be used insdie other bash scripts 
+
+check_status() {
+	local check_name="$1"
+	local status=$2
+
+	if [ "$status" -eq 0 ]; then
+		echo -e "${check_name}: ${GREEN}PASS${NC}"
+	else 
+		echo -e "${check_name}: ${RED}FAIL${NC}"
+		ANY_FAIL=1
+	fi
+}
+
+# disk space check
+
+ROOT_USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$ROOT_USAGE" -lt 90 ]; then
+	check_status "Disk usage OK (< 90%)" 0
+else
+	check_status "Disk usage OK (< 90%)" 1
+fi
+
+#-----> command -v it checks availiblty of commands bypasses programs -v tells show me where this command came from 
+
+if command -v python3 >/dev/null 2>&1; then
+	check_status "Python3 Availability" 0
+else 
+	check_status "Python3 Availbility" 1
+fi 
+
+#---> file test operator 
+
+if [ -f /var/log/syslog ]; then
+	check_status "syslog.log Exsistance" 0
+else 
+	check_status "syslog.log Exsistance" 1
+fi
+
+if [ "$ANY_FAIL" -eq 0 ]; then
+	exit 0
+else 
+	exit 1
+fi
+
+
+
