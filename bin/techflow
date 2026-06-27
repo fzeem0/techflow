@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+TECHFLOW_HOME=${TECHFLOW_HOME:-"$HOME/techflow"}
+MISSION_DIR="$PROJECT_ROOT/missions"
+PROGRESS_FILE="$TECHFLOW_HOME/.progress"
+
+readonly NAMES=(
+    "Server Recon — Know Your Machine"
+    "Filesystem Disaster Recovery"
+    "Log Investigation — Find the Incident"
+    "Text Processing Gauntlet"
+    "Process Crisis Management"
+    "Network Diagnosis"
+    "Bash Scripting — Automate Everything"
+    "Git Operations Workflow"
+    "System Administration"
+)
+
+usage() {
+    cat <<'EOF'
+Usage: techflow [menu|status]
+       techflow mission <1-9>
+
+Commands:
+  menu         show all missions
+  status       show progress
+  mission N    display mission N
+EOF
+}
+
+ensure_workspace() {
+    if [[ ! -f "$TECHFLOW_HOME/.techflow-workspace" ]]; then
+        "$PROJECT_ROOT/scripts/init_workspace.sh" --workspace "$TECHFLOW_HOME"
+    fi
+    [[ -f "$PROGRESS_FILE" ]] || touch "$PROGRESS_FILE"
+}
+
+completed() {
+    local mission=$1
+    grep -qx "$mission" "$PROGRESS_FILE" 2>/dev/null
+}
+
+menu() {
+    local mission marker
+    printf '\nTechFlow DevOps Training\n\n'
+    for mission in "${!NAMES[@]}"; do
+        mission=$((mission + 1))
+        marker='[ ]'
+        completed "$mission" && marker='[x]'
+        printf '  %s M%d: %s\n' "$marker" "$mission" "${NAMES[$((mission - 1))]}"
+    done
+    printf '\nOpen a mission with: techflow mission <N>\n\n'
+}
+
+show_mission() {
+    local mission=${1:-}
+    [[ "$mission" =~ ^[1-9]$ ]] || { echo "Mission must be a number from 1 to 9" >&2; exit 2; }
+    cat "$MISSION_DIR/$(printf '%02d' "$mission").md"
+}
+
+ensure_workspace
+case "${1:-menu}" in
+    menu) menu ;;
+    status) menu ;;
+    mission) show_mission "${2:-}" ;;
+    -h|--help|help) usage ;;
+    *) usage >&2; exit 2 ;;
+esac
