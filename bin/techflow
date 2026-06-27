@@ -116,12 +116,16 @@ status() {
 
 show_mission() {
     validate_mission "${1:-}"
-    cat "$MISSION_DIR/$(printf '%02d' "$1").md"
+    python3 "$PROJECT_ROOT/scripts/render_markdown.py" \
+        "$MISSION_DIR/$(printf '%02d' "$1").md"
 }
 
 show_hint() {
-    validate_mission "${1:-}"
-    cat "$HINT_DIR/$(printf '%02d' "$1").txt"
+    local mission=${1:-}
+    validate_mission "$mission"
+    python3 "$PROJECT_ROOT/scripts/render_markdown.py" \
+        --title "Hint for Mission $mission — ${NAMES[$((mission - 1))]}" \
+        "$HINT_DIR/$(printf '%02d' "$mission").txt"
 }
 
 verify_mission() {

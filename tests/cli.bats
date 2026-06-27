@@ -35,6 +35,16 @@ teardown() {
     grep -qx 1 "$TECHFLOW_HOME/.progress"
 }
 
+@test "mission output is terminal-friendly instead of raw Markdown" {
+    run "$PROJECT_ROOT/bin/techflow" mission 1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"TECHFLOW TRAINING"* ]]
+    [[ "$output" == *"MISSION 1 — SERVER RECON"* ]]
+    [[ "$output" == *"[1]"* ]]
+    [[ "$output" != *"# Mission"* ]]
+    [[ "$output" != *'`uname`'* ]]
+}
+
 @test "standalone scripts handle success and no-match paths" {
     run "$PROJECT_ROOT/scripts/check_health"
     [ "$status" -eq 0 ]

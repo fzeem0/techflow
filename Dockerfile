@@ -52,6 +52,7 @@ RUN chmod 0755 \
         /opt/techflow/scripts/init_workspace.sh \
         /opt/techflow/scripts/log_report.sh \
         /opt/techflow/scripts/monitor.sh \
+        /opt/techflow/scripts/render_markdown.py \
         /opt/techflow/scripts/setup.env.sh \
         /opt/techflow/scripts/start-app \
         /opt/techflow/scripts/stop-app \
