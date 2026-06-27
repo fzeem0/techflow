@@ -1,0 +1,2 @@
+`sort -u` creates the unique IP list. Use `awk -F,` for CSV and retain the
+header explicitly before filtering `db-01` rows.

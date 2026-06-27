@@ -1,0 +1,2 @@
+Start with `ip -brief address`, `ip route`, `cat /etc/resolv.conf`, `getent
+hosts example.com`, `dig example.com` and `ss -tanp`.

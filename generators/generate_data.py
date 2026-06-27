@@ -124,6 +124,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     base = args.output.resolve()
+    if base in (Path("/"), Path.home().resolve()):
+        raise SystemExit(f"refusing unsafe output directory: {base}")
+    if not (base / "config/app.conf").is_file() or not (base / "config/nginx.conf").is_file():
+        raise SystemExit("output must contain the TechFlow config templates")
     for directory in ("data", "logs", "config"):
         (base / directory).mkdir(parents=True, exist_ok=True)
     rng = random.Random(args.seed)

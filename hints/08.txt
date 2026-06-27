@@ -1,0 +1,3 @@
+Set identity only inside the lab: `git config user.name Training` and `git
+config user.email training@localhost`. Rename the initial branch with `git
+branch -M main`.

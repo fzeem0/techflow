@@ -1,0 +1,2 @@
+Validate `$#`, test input paths with `[[ -f "$path" ]]`, and make expected
+non-matches safe under strict mode with `grep ... || true`.

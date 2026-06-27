@@ -3,9 +3,9 @@
 set -euo pipefail
 
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-TECHFLOW_HOME=${TECHFLOW_HOME:-"$HOME/techflow"}
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
 MISSION_DIR="$PROJECT_ROOT/missions"
-PROGRESS_FILE="$TECHFLOW_HOME/.progress"
+HINT_DIR="$PROJECT_ROOT/hints"
 
 readonly NAMES=(
     "Server Recon — Know Your Machine"
@@ -21,51 +21,121 @@ readonly NAMES=(
 
 usage() {
     cat <<'EOF'
-Usage: techflow [menu|status]
+Usage: techflow [menu|status|check]
        techflow mission <1-9>
+       techflow hint <1-9>
+       techflow verify <1-9>
+       techflow done <1-9>
 
 Commands:
   menu         show all missions
-  status       show progress
+  status       show completion percentage
   mission N    display mission N
+  hint N       display focused hints for mission N
+  verify N     validate and mark mission N complete
+  done N       alias for verify; completion cannot bypass validation
+  check        check the training workspace health
 EOF
 }
 
 ensure_workspace() {
+    [[ -n "$TECHFLOW_HOME" ]] || {
+        echo "TECHFLOW_HOME is not set; use the Docker launcher or set an absolute workspace path" >&2
+        exit 2
+    }
     if [[ ! -f "$TECHFLOW_HOME/.techflow-workspace" ]]; then
         "$PROJECT_ROOT/scripts/init_workspace.sh" --workspace "$TECHFLOW_HOME"
     fi
+    PROGRESS_FILE="$TECHFLOW_HOME/.progress"
     [[ -f "$PROGRESS_FILE" ]] || touch "$PROGRESS_FILE"
 }
 
+validate_mission() {
+    [[ "${1:-}" =~ ^[1-9]$ ]] || {
+        echo "Mission must be a number from 1 to 9" >&2
+        exit 2
+    }
+}
+
 completed() {
-    local mission=$1
-    grep -qx "$mission" "$PROGRESS_FILE" 2>/dev/null
+    grep -qx "$1" "$PROGRESS_FILE" 2>/dev/null
+}
+
+next_mission() {
+    local mission
+    for mission in {1..9}; do
+        if ! completed "$mission"; then
+            echo "$mission"
+            return
+        fi
+    done
+    echo 10
+}
+
+mark_done() {
+    local mission=$1 temp_file
+    completed "$mission" && return
+
+    exec 9>"$PROGRESS_FILE.lock"
+    command -v flock >/dev/null 2>&1 && flock 9
+    temp_file=$(mktemp "${PROGRESS_FILE}.tmp.XXXXXX")
+    trap 'rm -f "${temp_file:-}"' RETURN
+    { cat "$PROGRESS_FILE"; printf '%s\n' "$mission"; } |
+        awk '/^[1-9]$/' |
+        sort -n -u > "$temp_file"
+    mv "$temp_file" "$PROGRESS_FILE"
+    trap - RETURN
 }
 
 menu() {
-    local mission marker
+    local mission marker next
+    next=$(next_mission)
     printf '\nTechFlow DevOps Training\n\n'
-    for mission in "${!NAMES[@]}"; do
-        mission=$((mission + 1))
-        marker='[ ]'
-        completed "$mission" && marker='[x]'
+    for mission in {1..9}; do
+        if completed "$mission"; then
+            marker='[x]'
+        elif ((mission == next)); then
+            marker='[>]'
+        else
+            marker='[ ]'
+        fi
         printf '  %s M%d: %s\n' "$marker" "$mission" "${NAMES[$((mission - 1))]}"
     done
-    printf '\nOpen a mission with: techflow mission <N>\n\n'
+    printf '\nUse: techflow mission <N> | hint <N> | verify <N>\n\n'
+}
+
+status() {
+    local count
+    count=$(awk '/^[1-9]$/' "$PROGRESS_FILE" | sort -u | wc -l)
+    printf 'Completed: %d/9 (%d%%)\n' "$count" "$((count * 100 / 9))"
+    menu
 }
 
 show_mission() {
-    local mission=${1:-}
-    [[ "$mission" =~ ^[1-9]$ ]] || { echo "Mission must be a number from 1 to 9" >&2; exit 2; }
-    cat "$MISSION_DIR/$(printf '%02d' "$mission").md"
+    validate_mission "${1:-}"
+    cat "$MISSION_DIR/$(printf '%02d' "$1").md"
+}
+
+show_hint() {
+    validate_mission "${1:-}"
+    cat "$HINT_DIR/$(printf '%02d' "$1").txt"
+}
+
+verify_mission() {
+    validate_mission "${1:-}"
+    "$PROJECT_ROOT/scripts/verify_mission.sh" "$1"
+    mark_done "$1"
+    echo "Progress saved."
 }
 
 ensure_workspace
 case "${1:-menu}" in
     menu) menu ;;
-    status) menu ;;
+    status) status ;;
     mission) show_mission "${2:-}" ;;
+    hint) show_hint "${2:-}" ;;
+    verify|done) verify_mission "${2:-}" ;;
+    check) "$PROJECT_ROOT/scripts/check_health" ;;
     -h|--help|help) usage ;;
     *) usage >&2; exit 2 ;;
 esac

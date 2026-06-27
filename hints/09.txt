@@ -1,0 +1,2 @@
+Write the cron expression as plain text; do not call `crontab`. Use `tar -tzf`
+to inspect the final archive before running the health check.

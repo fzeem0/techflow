@@ -1,41 +1,38 @@
- #!/usr/bin/env bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 
-LOG_FILE="$HOME/techflow/logs/syslog.log"
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
+LOG_FILE=${1:-${TECHFLOW_HOME:+$TECHFLOW_HOME/logs/syslog.log}}
 
-if [ ! -f "$LOG_FILE" ]; then
-	echo "Error: Log file not found at $LOG_FILE" >&2
-	exit 1
+if [[ -z "$LOG_FILE" ]]; then
+    echo "Usage: TECHFLOW_HOME=/workspace $0 [LOG_FILE]" >&2
+    exit 2
 fi
 
-if [ ! -s "$LOG_FILE" ]; then
-	echo "---Log report summary---"
-	echo "Log file is empty."
-	exit 0
+if [[ ! -f "$LOG_FILE" ]]; then
+    echo "Error: log file not found: $LOG_FILE" >&2
+    exit 1
 fi
 
 TOTAL_LINES=$(wc -l < "$LOG_FILE")
+ERROR_COUNT=$(grep -i -c 'ERROR' "$LOG_FILE" || true)
+WARN_COUNT=$(grep -i -c 'WARN' "$LOG_FILE" || true)
 
-ERROR_COUNT=$(grep -i -c "ERROR" "$LOG_FILE" || true)
-WARN_COUNT=$(grep -i -c "WARN" "$LOG_FILE" || true)
+printf '%s\n' \
+    '======================================' \
+    '          LOG REPORT SUMMARY' \
+    '======================================'
+printf 'Log file: %s\nTotal lines: %s\nERROR count: %s\nWARN count: %s\n' \
+    "$LOG_FILE" "$TOTAL_LINES" "$ERROR_COUNT" "$WARN_COUNT"
+printf '%s\n' '--------------------------------------' 'Top 5 error messages:'
 
-echo "======================================"
-echo "         LOG REPORT SUMMARY           "
-echo "======================================"
-echo "Log file: $LOG_FILE"
-echo "Total lines: $TOTAL_LINES"
-echo "ERROR count: $ERROR_COUNT"
-echo "WARN count: $WARN_COUNT"
-echo "______________________________________"
-echo "Top 5 Error Messages:"
-echo "______________________________________"
-
-grep -i "ERROR" "$LOG_FILE" | \
-	awk '{for(i=1; i<=3; i++) $i=""; print $0}' | \
-	sed 's/^[ \t]*//' | \
-	sort | \
-	uniq -c | \
-	sort -rn | \
-	head -n 5
-echo "____________________"
+if ((ERROR_COUNT == 0)); then
+    echo "No ERROR records found."
+else
+    awk 'BEGIN {IGNORECASE=1} /ERROR/ {for (i=1; i<=5; i++) $i=""; sub(/^[[:space:]]+/, ""); print}' "$LOG_FILE" |
+        sort |
+        uniq -c |
+        sort -rn |
+        sed -n '1,5p'
+fi

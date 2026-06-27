@@ -1,69 +1,65 @@
 #!/usr/bin/env bash
 
-#-----> set -e ---> exit on error 
-#-----> set -u ---> typo or not specified variable problem
-#-----> set -o pipefail ----> reporter it tells error so all of them just for safe coding 
+set -euo pipefail
 
-set -euo pipefail 
-
-#--- so colors \033--> gives commands so its send an escape character to the terminal 
-#---- [ ----> start color command
-#----> 0 ---> norman style 
-#-----> 32 ----> green 
-#-----> 31 ----> red
-#----> m --> finish command 
-
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-#---its global inidcator for specifically health checking if no fail it prints 0
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
+DISK_THRESHOLD=${TECHFLOW_DISK_THRESHOLD:-90}
 ANY_FAIL=0
 
-#---> we need check status is become function later it can be used insdie other bash scripts 
+if [[ -t 1 && -z ${NO_COLOR:-} ]]; then
+    GREEN=$'\033[0;32m'
+    RED=$'\033[0;31m'
+    RESET=$'\033[0m'
+else
+    GREEN=''
+    RED=''
+    RESET=''
+fi
 
 check_status() {
-	local check_name="$1"
-	local status=$2
-
-	if [ "$status" -eq 0 ]; then
-		echo -e "${check_name}: ${GREEN}PASS${NC}"
-	else 
-		echo -e "${check_name}: ${RED}FAIL${NC}"
-		ANY_FAIL=1
-	fi
+    local name=$1
+    local status=$2
+    if ((status == 0)); then
+        printf '%s: %sPASS%s\n' "$name" "$GREEN" "$RESET"
+    else
+        printf '%s: %sFAIL%s\n' "$name" "$RED" "$RESET"
+        ANY_FAIL=1
+    fi
 }
 
-# disk space check
-
-ROOT_USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
-if [ "$ROOT_USAGE" -lt 90 ]; then
-	check_status "Disk usage OK (< 90%)" 0
-else
-	check_status "Disk usage OK (< 90%)" 1
+if [[ -z "$TECHFLOW_HOME" || ! -f "$TECHFLOW_HOME/.techflow-workspace" ]]; then
+    echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
+    exit 2
 fi
 
-#-----> command -v it checks availiblty of commands bypasses programs -v tells show me where this command came from 
+if [[ ! "$DISK_THRESHOLD" =~ ^[0-9]+$ ]] || ((DISK_THRESHOLD < 1 || DISK_THRESHOLD > 100)); then
+    echo "TECHFLOW_DISK_THRESHOLD must be an integer from 1 to 100" >&2
+    exit 2
+fi
+
+ROOT_USAGE=$(df -P "$TECHFLOW_HOME" | awk 'NR==2 {gsub(/%/, "", $5); print $5}')
+if [[ "$ROOT_USAGE" =~ ^[0-9]+$ ]] && ((ROOT_USAGE < DISK_THRESHOLD)); then
+    check_status "Workspace disk usage below ${DISK_THRESHOLD}%" 0
+else
+    check_status "Workspace disk usage below ${DISK_THRESHOLD}%" 1
+fi
 
 if command -v python3 >/dev/null 2>&1; then
-	check_status "Python3 Availability" 0
-else 
-	check_status "Python3 Availbility" 1
-fi 
-
-#---> file test operator 
-
-if [ -f /var/log/syslog ]; then
-	check_status "syslog.log Exsistance" 0
-else 
-	check_status "syslog.log Exsistance" 1
+    check_status "Python 3 available" 0
+else
+    check_status "Python 3 available" 1
 fi
 
-if [ "$ANY_FAIL" -eq 0 ]; then
-	exit 0
-else 
-	exit 1
+if [[ -s "$TECHFLOW_HOME/logs/syslog.log" ]]; then
+    check_status "Training syslog available" 0
+else
+    check_status "Training syslog available" 1
 fi
 
+if [[ -r "$TECHFLOW_HOME/config/app.conf" ]]; then
+    check_status "Application config readable" 0
+else
+    check_status "Application config readable" 1
+fi
 
-
+exit "$ANY_FAIL"
