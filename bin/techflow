@@ -20,7 +20,7 @@ readonly NAMES=(
 )
 
 usage() {
-    cat <<'EOF'
+    cat << 'EOF'
 Usage: techflow [menu|status|check]
        techflow mission <1-9>
        techflow hint <1-9>
@@ -58,7 +58,7 @@ validate_mission() {
 }
 
 completed() {
-    grep -qx "$1" "$PROGRESS_FILE" 2>/dev/null
+    grep -qx "$1" "$PROGRESS_FILE" 2> /dev/null
 }
 
 next_mission() {
@@ -76,11 +76,14 @@ mark_done() {
     local mission=$1 temp_file
     completed "$mission" && return
 
-    exec 9>"$PROGRESS_FILE.lock"
-    command -v flock >/dev/null 2>&1 && flock 9
+    exec 9> "$PROGRESS_FILE.lock"
+    command -v flock > /dev/null 2>&1 && flock 9
     temp_file=$(mktemp "${PROGRESS_FILE}.tmp.XXXXXX")
     trap 'rm -f "${temp_file:-}"' RETURN
-    { cat "$PROGRESS_FILE"; printf '%s\n' "$mission"; } |
+    {
+        cat "$PROGRESS_FILE"
+        printf '%s\n' "$mission"
+    } |
         awk '/^[1-9]$/' |
         sort -n -u > "$temp_file"
     mv "$temp_file" "$PROGRESS_FILE"
@@ -134,8 +137,11 @@ case "${1:-menu}" in
     status) status ;;
     mission) show_mission "${2:-}" ;;
     hint) show_hint "${2:-}" ;;
-    verify|done) verify_mission "${2:-}" ;;
+    verify | done) verify_mission "${2:-}" ;;
     check) "$PROJECT_ROOT/scripts/check_health" ;;
-    -h|--help|help) usage ;;
-    *) usage >&2; exit 2 ;;
+    -h | --help | help) usage ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
 esac

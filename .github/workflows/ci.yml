@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build training image
+        run: docker build --tag techflow:test .
+      - name: Run tests in the restricted image
+        run: >-
+          docker run --rm
+          --read-only
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m
+          --tmpfs /workspace:rw,exec,nosuid,nodev,size=128m,uid=1000,gid=1000
+          --cap-drop ALL
+          --security-opt no-new-privileges
+          --pids-limit 256
+          --memory 512m
+          techflow:test
+          /opt/techflow/scripts/test

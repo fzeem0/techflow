@@ -10,19 +10,31 @@ usage() {
     echo "Usage: TECHFLOW_HOME=/workspace $0 {dev|staging|prod} [--yes] [--output FILE]"
 }
 
-[[ $# -ge 1 ]] || { usage >&2; exit 2; }
+[[ $# -ge 1 ]] || {
+    usage >&2
+    exit 2
+}
 ENV_TYPE=${1,,}
 shift
 
 while (($#)); do
     case "$1" in
-        --yes) ASSUME_YES=1; shift ;;
+        --yes)
+            ASSUME_YES=1
+            shift
+            ;;
         --output)
-            [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
             OUTPUT=$2
             shift 2
             ;;
-        *) usage >&2; exit 2 ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -56,12 +68,18 @@ esac
 OUTPUT=${OUTPUT:-"$TECHFLOW_HOME/config/$ENV_TYPE.env"}
 case "$OUTPUT" in
     "$TECHFLOW_HOME"/*) ;;
-    *) echo "Output must stay inside TECHFLOW_HOME" >&2; exit 2 ;;
+    *)
+        echo "Output must stay inside TECHFLOW_HOME" >&2
+        exit 2
+        ;;
 esac
 
 if ((ASSUME_YES == 0)); then
     read -r -p "Write $ENV_TYPE configuration to $OUTPUT? [y/N] " confirm
-    [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Cancelled"; exit 0; }
+    [[ "$confirm" =~ ^[Yy]$ ]] || {
+        echo "Cancelled"
+        exit 0
+    }
 fi
 
 mkdir -p "$(dirname "$OUTPUT")"

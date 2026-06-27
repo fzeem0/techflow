@@ -13,16 +13,22 @@ usage() {
 while (($#)); do
     case "$1" in
         --count)
-            [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
             COUNT=$2
             shift 2
             ;;
         --interval)
-            [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
             INTERVAL=$2
             shift 2
             ;;
-        -h|--help)
+        -h | --help)
             usage
             exit 0
             ;;
@@ -37,8 +43,14 @@ done
     echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
     exit 2
 }
-[[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || { echo "--count must be a positive integer" >&2; exit 2; }
-[[ "$INTERVAL" =~ ^[0-9]+([.][0-9]+)?$ ]] || { echo "--interval must be non-negative" >&2; exit 2; }
+[[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || {
+    echo "--count must be a positive integer" >&2
+    exit 2
+}
+[[ "$INTERVAL" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
+    echo "--interval must be non-negative" >&2
+    exit 2
+}
 
 LOG_FILE="$TECHFLOW_HOME/logs/monitor.log"
 mkdir -p "$(dirname "$LOG_FILE")"

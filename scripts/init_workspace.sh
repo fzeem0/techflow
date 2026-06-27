@@ -13,16 +13,22 @@ usage() {
 while (($#)); do
     case "$1" in
         --workspace)
-            [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
             TECHFLOW_HOME=$2
             shift 2
             ;;
         --seed)
-            [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
             SEED=$2
             shift 2
             ;;
-        -h|--help)
+        -h | --help)
             usage
             exit 0
             ;;
@@ -34,10 +40,19 @@ while (($#)); do
     esac
 done
 
-[[ -n "$TECHFLOW_HOME" ]] || { usage >&2; exit 2; }
-[[ "$TECHFLOW_HOME" = /* ]] || { echo "Workspace path must be absolute" >&2; exit 2; }
+[[ -n "$TECHFLOW_HOME" ]] || {
+    usage >&2
+    exit 2
+}
+[[ "$TECHFLOW_HOME" = /* ]] || {
+    echo "Workspace path must be absolute" >&2
+    exit 2
+}
 case "$TECHFLOW_HOME" in
-    /|"$HOME") echo "Refusing unsafe workspace path: $TECHFLOW_HOME" >&2; exit 2 ;;
+    / | "$HOME")
+        echo "Refusing unsafe workspace path: $TECHFLOW_HOME" >&2
+        exit 2
+        ;;
 esac
 
 if [[ -f "$TECHFLOW_HOME/.techflow-workspace" ]]; then
@@ -45,7 +60,7 @@ if [[ -f "$TECHFLOW_HOME/.techflow-workspace" ]]; then
     exit 0
 fi
 if [[ -d "$TECHFLOW_HOME" && -n $(find "$TECHFLOW_HOME" -mindepth 1 -maxdepth 1 -print -quit) &&
-      ! -f "$TECHFLOW_HOME/.techflow-initializing" ]]; then
+! -f "$TECHFLOW_HOME/.techflow-initializing" ]]; then
     echo "Refusing to initialize a non-empty unmarked directory: $TECHFLOW_HOME" >&2
     exit 1
 fi

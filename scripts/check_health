@@ -44,7 +44,7 @@ else
     check_status "Workspace disk usage below ${DISK_THRESHOLD}%" 1
 fi
 
-if command -v python3 >/dev/null 2>&1; then
+if command -v python3 > /dev/null 2>&1; then
     check_status "Python 3 available" 0
 else
     check_status "Python 3 available" 1

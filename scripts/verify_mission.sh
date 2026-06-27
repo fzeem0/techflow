@@ -9,7 +9,10 @@ MISSION=${1:-}
     echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
     exit 2
 }
-[[ "$MISSION" =~ ^[1-9]$ ]] || { echo "Mission must be a number from 1 to 9" >&2; exit 2; }
+[[ "$MISSION" =~ ^[1-9]$ ]] || {
+    echo "Mission must be a number from 1 to 9" >&2
+    exit 2
+}
 
 fail() {
     echo "FAIL: $*" >&2
@@ -47,15 +50,15 @@ verify_4() {
     require_nonempty "$TECHFLOW_HOME/reports/service-errors.txt"
     LC_ALL=C sort -cu "$TECHFLOW_HOME/reports/unique-ips.txt" || fail "unique-ips.txt must be sorted and unique"
     [[ $(head -n 1 "$TECHFLOW_HOME/reports/db-metrics.csv") == timestamp,* ]] || fail "db-metrics.csv must retain the CSV header"
-    ! tail -n +2 "$TECHFLOW_HOME/reports/db-metrics.csv" | grep -v ',db-01,' >/dev/null || fail "db-metrics.csv contains another server"
+    ! tail -n +2 "$TECHFLOW_HOME/reports/db-metrics.csv" | grep -v ',db-01,' > /dev/null || fail "db-metrics.csv contains another server"
 }
 
 verify_5() {
     local pid_file="$TECHFLOW_HOME/app/server.pid"
     [[ -f "$pid_file" ]] || fail "start the app first"
     local pid
-    pid=$(<"$pid_file")
-    [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null || fail "recorded app PID is not running"
+    pid=$(< "$pid_file")
+    [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2> /dev/null || fail "recorded app PID is not running"
     curl --fail --silent "http://127.0.0.1:${TECHFLOW_PORT:-8888}/health" | grep -q '"status": "ok"' ||
         fail "health endpoint is not available"
 }
@@ -71,16 +74,16 @@ verify_7() {
     bash -n "$health" "$summary" || fail "a script has invalid Bash syntax"
     grep -q '^set -euo pipefail$' "$health" || fail "health-report must enable strict mode"
     grep -q '^set -euo pipefail$' "$summary" || fail "log-summary must enable strict mode"
-    "$health" >/dev/null || fail "health-report returned an error"
-    "$summary" "$TECHFLOW_HOME/logs/syslog.log" >/dev/null || fail "log-summary returned an error for syslog.log"
-    if "$summary" "$TECHFLOW_HOME/logs/does-not-exist" >/dev/null 2>&1; then
+    "$health" > /dev/null || fail "health-report returned an error"
+    "$summary" "$TECHFLOW_HOME/logs/syslog.log" > /dev/null || fail "log-summary returned an error for syslog.log"
+    if "$summary" "$TECHFLOW_HOME/logs/does-not-exist" > /dev/null 2>&1; then
         fail "log-summary must reject a missing file"
     fi
 }
 
 verify_8() {
     local repository="$TECHFLOW_HOME/missions/git-lab"
-    git -C "$repository" rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "git-lab is not a Git repository"
+    git -C "$repository" rev-parse --is-inside-work-tree > /dev/null 2>&1 || fail "git-lab is not a Git repository"
     git -C "$repository" show-ref --verify --quiet refs/heads/main || fail "main branch is missing"
     git -C "$repository" show-ref --verify --quiet refs/heads/feature/status-page || fail "feature/status-page branch is missing"
     git -C "$repository" show-ref --verify --quiet refs/tags/training-complete || fail "training-complete tag is missing"

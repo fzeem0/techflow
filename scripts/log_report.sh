@@ -30,7 +30,7 @@ printf '%s\n' '--------------------------------------' 'Top 5 error messages:'
 if ((ERROR_COUNT == 0)); then
     echo "No ERROR records found."
 else
-    awk 'BEGIN {IGNORECASE=1} /ERROR/ {for (i=1; i<=5; i++) $i=""; sub(/^[[:space:]]+/, ""); print}' "$LOG_FILE" |
+    awk 'BEGIN {IGNORECASE=1} /ERROR/ {for (i=1; i<=6; i++) $i=""; sub(/^[[:space:]]+/, ""); print}' "$LOG_FILE" |
         sort |
         uniq -c |
         sort -rn |

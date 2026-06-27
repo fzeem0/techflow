@@ -8,7 +8,7 @@ readonly COMPOSE_FILE="$PROJECT_ROOT/compose.yaml"
 COMPOSE=(docker compose --project-directory "$PROJECT_ROOT" --file "$COMPOSE_FILE")
 
 usage() {
-    cat <<'EOF'
+    cat << 'EOF'
 Usage: ./tf COMMAND
 
 Commands:
@@ -29,9 +29,9 @@ die() {
 }
 
 check_docker() {
-    command -v docker >/dev/null 2>&1 || die "Docker is not installed"
-    docker compose version >/dev/null 2>&1 || die "the Docker Compose plugin is not available"
-    docker info >/dev/null 2>&1 || die "the Docker daemon is not running or is not accessible"
+    command -v docker > /dev/null 2>&1 || die "Docker is not installed"
+    docker compose version > /dev/null 2>&1 || die "the Docker Compose plugin is not available"
+    docker info > /dev/null 2>&1 || die "the Docker daemon is not running or is not accessible"
 }
 
 confirm_reset() {
@@ -52,7 +52,7 @@ command=${1:-help}
 shift || true
 
 case "$command" in
-    help|-h|--help)
+    help | -h | --help)
         [[ $# -eq 0 ]] || die "help does not accept arguments"
         usage
         ;;

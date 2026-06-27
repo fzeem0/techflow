@@ -16,14 +16,14 @@ if [[ ! -f "$PID_FILE" ]]; then
     exit 0
 fi
 
-pid=$(<"$PID_FILE")
-if [[ ! "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2>/dev/null; then
+pid=$(< "$PID_FILE")
+if [[ ! "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2> /dev/null; then
     rm -f "$PID_FILE"
     echo "Removed stale PID file"
     exit 0
 fi
 
-command_line=$(ps -p "$pid" -o args= 2>/dev/null || true)
+command_line=$(ps -p "$pid" -o args= 2> /dev/null || true)
 if [[ "$command_line" != *"$SERVER"* ]]; then
     echo "Refusing to stop PID $pid because it is not the training app" >&2
     exit 1
@@ -31,7 +31,7 @@ fi
 
 kill -TERM "$pid"
 for _ in $(seq 1 50); do
-    if ! kill -0 "$pid" 2>/dev/null; then
+    if ! kill -0 "$pid" 2> /dev/null; then
         rm -f "$PID_FILE"
         echo "TechFlow app stopped"
         exit 0

@@ -5,6 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         bash \
+        bats \
         ca-certificates \
         coreutils \
         curl \
@@ -24,6 +25,8 @@ RUN apt-get update \
         procps \
         python3 \
         sed \
+        shellcheck \
+        shfmt \
         tar \
         traceroute \
         tree \
@@ -53,6 +56,7 @@ RUN chmod 0755 \
         /opt/techflow/scripts/start-app \
         /opt/techflow/scripts/stop-app \
         /opt/techflow/scripts/sync_workspace.sh \
+        /opt/techflow/scripts/test \
         /opt/techflow/scripts/verify_mission.sh \
     && ln -s /opt/techflow/bin/techflow /usr/local/bin/techflow
 
