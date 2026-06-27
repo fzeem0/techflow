@@ -4,6 +4,9 @@ services:
   trainer:
     build:
       context: .
+      # Build-only workaround for daemon DNS/proxy setups. Runtime networking
+      # remains the isolated Compose bridge below.
+      network: host
     image: techflow:local
     init: true
     stdin_open: true

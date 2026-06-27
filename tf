@@ -5,6 +5,7 @@ set -euo pipefail
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 readonly PROJECT_ROOT
 readonly COMPOSE_FILE="$PROJECT_ROOT/compose.yaml"
+readonly IMAGE_NAME=techflow:local
 COMPOSE=(docker compose --project-directory "$PROJECT_ROOT" --file "$COMPOSE_FILE")
 
 usage() {
@@ -34,6 +35,13 @@ check_docker() {
     docker info > /dev/null 2>&1 || die "the Docker daemon is not running or is not accessible"
 }
 
+ensure_image() {
+    if ! docker image inspect "$IMAGE_NAME" > /dev/null 2>&1; then
+        echo "TechFlow image is missing; building it now..."
+        "${COMPOSE[@]}" build
+    fi
+}
+
 confirm_reset() {
     if [[ ${1:-} == --yes ]]; then
         return
@@ -59,17 +67,20 @@ case "$command" in
     start)
         [[ $# -eq 0 ]] || die "start does not accept arguments"
         check_docker
-        exec "${COMPOSE[@]}" run --rm --build --service-ports trainer \
+        ensure_image
+        exec "${COMPOSE[@]}" run --rm --service-ports trainer \
             bash -lc 'techflow status; echo "Type: techflow mission <N>"; exec bash'
         ;;
     shell)
         [[ $# -eq 0 ]] || die "shell does not accept arguments"
         check_docker
-        exec "${COMPOSE[@]}" run --rm --build trainer bash
+        ensure_image
+        exec "${COMPOSE[@]}" run --rm trainer bash
         ;;
     status)
         [[ $# -eq 0 ]] || die "status does not accept arguments"
         check_docker
+        ensure_image
         "${COMPOSE[@]}" run --rm trainer techflow status
         ;;
     build)
@@ -80,6 +91,7 @@ case "$command" in
     test)
         [[ $# -eq 0 ]] || die "test does not accept arguments"
         check_docker
+        ensure_image
         "${COMPOSE[@]}" run --rm trainer /opt/techflow/scripts/test
         ;;
     stop)
