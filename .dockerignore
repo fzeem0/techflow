@@ -1,0 +1,12 @@
+.git
+.github
+.agents
+.codex
+__pycache__
+*.py[cod]
+*.log
+.env
+.venv
+build
+dist
+reports

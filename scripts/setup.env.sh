@@ -1,68 +1,93 @@
 #!/usr/bin/env bash
 
-# 1. Validate argument count
+set -euo pipefail
 
-if [ $# -ne 1 ]; then
-	echo "Error: Missing environment argument."
-	echo "Usage: $0 {dev|staging|prod}"
-	exit 1
-fi
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
+ASSUME_YES=0
+OUTPUT=''
 
-#2. assign and validate teh envoriment typoe using case statment 
-ENV_TYPE=$(echo "$1" | tr '[:upper:]' '[:lower:]')
+usage() {
+    echo "Usage: TECHFLOW_HOME=/workspace $0 {dev|staging|prod} [--yes] [--output FILE]"
+}
+
+[[ $# -ge 1 ]] || {
+    usage >&2
+    exit 2
+}
+ENV_TYPE=${1,,}
+shift
+
+while (($#)); do
+    case "$1" in
+        --yes)
+            ASSUME_YES=1
+            shift
+            ;;
+        --output)
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
+            OUTPUT=$2
+            shift 2
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
+done
+
+[[ -n "$TECHFLOW_HOME" && -f "$TECHFLOW_HOME/.techflow-workspace" ]] || {
+    echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
+    exit 2
+}
 
 case "$ENV_TYPE" in
-	dev) 
-		DB_HOST="localhost"
-		DEBUG_MODE="true"
-		LOG_LEVEL="debug"
-		;;
-	staging)
-		DB_HOST="stg-db.techflow.internal"
-		DEBUG_MODE="false"
-		LOG_LEVEL="info"
-		;;
-	prod)
-		DB_HOST="prod-db-cluster.techflow.internal"
-		DEBUG_MODE="false"
-		LOG_LEVEL="warn"
-		;;
-	*)
-		echo "Error: Invalid enviroment '$1'."
-		echo "Allowed options are: dev, staging, prod"
-		exit 1
-		;;
+    dev)
+        DB_HOST=localhost
+        DEBUG_MODE=true
+        LOG_LEVEL=debug
+        ;;
+    staging)
+        DB_HOST=stg-db.techflow.internal
+        DEBUG_MODE=false
+        LOG_LEVEL=info
+        ;;
+    prod)
+        DB_HOST=prod-db-cluster.techflow.internal
+        DEBUG_MODE=false
+        LOG_LEVEL=warn
+        ;;
+    *)
+        echo "Invalid environment: $ENV_TYPE (expected dev, staging or prod)" >&2
+        exit 2
+        ;;
 esac
 
-#target DIR path "
+OUTPUT=${OUTPUT:-"$TECHFLOW_HOME/config/$ENV_TYPE.env"}
+case "$OUTPUT" in
+    "$TECHFLOW_HOME"/*) ;;
+    *)
+        echo "Output must stay inside TECHFLOW_HOME" >&2
+        exit 2
+        ;;
+esac
 
-TARGET_DIR="/tmp/techflow-$ENV_TYPE"
-
-# 3 prompt user for cinfirmation before deploying 
-
-echo "Prepering to configureation a [$ENV_TYPE] workspace at: $TARGET_DIR"
-read -p "Do you want to proceed (Y/N): " confirm
-
-if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-	echo "Setup canelled by user.."
-	exit 0
+if ((ASSUME_YES == 0)); then
+    read -r -p "Write $ENV_TYPE configuration to $OUTPUT? [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || {
+        echo "Cancelled"
+        exit 0
+    }
 fi
 
-#4 , create directory stucture 
-
-echo "Creating directory structure..."
-mkdir -p "$TARGET_DIR"
-
-# 5 . write the .env configuration uisng a heredoc
-
-echo "Writing the .env configutaion...."
-cat << EOF > "$TARGET_DIR/.env"
-ENVIRONMENT=$ENV_TYPE
-DB_HOST=$DB_HOST
-DEBUG_MODE=$DEBUG_MODE
-LOG_LEVEL=$LOG_LEVEL
-CONFIG_GENERATED_AT=$(date "+%Y-%m-%d %H:%M:%S")
-EOF
-
-echo " Successfully set up $ENV_TYPE enviroment inside $TARGET_DIR/"
-
+mkdir -p "$(dirname "$OUTPUT")"
+temp_file=$(mktemp "${OUTPUT}.tmp.XXXXXX")
+trap 'rm -f "$temp_file"' EXIT
+printf 'ENVIRONMENT=%s\nDB_HOST=%s\nDEBUG_MODE=%s\nLOG_LEVEL=%s\nCONFIG_GENERATED_AT=%s\n' \
+    "$ENV_TYPE" "$DB_HOST" "$DEBUG_MODE" "$LOG_LEVEL" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$temp_file"
+chmod 0600 "$temp_file"
+mv "$temp_file" "$OUTPUT"
+trap - EXIT
+echo "Wrote $OUTPUT"

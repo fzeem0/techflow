@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
+[[ -n "$TECHFLOW_HOME" && -f "$TECHFLOW_HOME/.techflow-workspace" ]] || {
+    echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
+    exit 2
+}
+
+PID_FILE="$TECHFLOW_HOME/app/server.pid"
+SERVER="$TECHFLOW_HOME/app/server.py"
+
+if [[ ! -f "$PID_FILE" ]]; then
+    echo "TechFlow app is not running"
+    exit 0
+fi
+
+pid=$(< "$PID_FILE")
+if [[ ! "$pid" =~ ^[0-9]+$ ]] || ! kill -0 "$pid" 2> /dev/null; then
+    rm -f "$PID_FILE"
+    echo "Removed stale PID file"
+    exit 0
+fi
+
+command_line=$(ps -p "$pid" -o args= 2> /dev/null || true)
+if [[ "$command_line" != *"$SERVER"* ]]; then
+    echo "Refusing to stop PID $pid because it is not the training app" >&2
+    exit 1
+fi
+
+kill -TERM "$pid"
+for _ in $(seq 1 50); do
+    if ! kill -0 "$pid" 2> /dev/null; then
+        rm -f "$PID_FILE"
+        echo "TechFlow app stopped"
+        exit 0
+    fi
+    sleep 0.1
+done
+
+echo "App did not stop after SIGTERM; leaving PID file for inspection" >&2
+exit 1

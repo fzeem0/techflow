@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-#capture failures and exit imidieatly if any error
+# Compatibility entrypoint kept for users of the original exercise.
 set -euo pipefail
-SOURCE_DIR="$HOME/techflow/config"
 
+PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+exec "$PROJECT_ROOT/bin/techflow" "$@"

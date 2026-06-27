@@ -1,21 +1,68 @@
 #!/usr/bin/env bash
 
-LOG_DIR="$HOME/techflow/logs"
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/monitor.log"
+set -euo pipefail
 
-counter=1
+TECHFLOW_HOME=${TECHFLOW_HOME:-}
+COUNT=10
+INTERVAL=5
 
-#loop exactly 10 times 
+usage() {
+    echo "Usage: TECHFLOW_HOME=/workspace $0 [--count N] [--interval SECONDS]"
+}
 
-while [ $counter -le 10 ]
-do
-	timestamp=$(date "+%Y-%m-%d %H:%M:%S")
-	load_avg=$(uptime | awk -F'load average:' '{print $2}' | awk -F',' '{print $1}' | xargs)
-	free_mem=$(free -h | awk 'NR==2 {print $5}')
-	echo "[$timestamp] Load Avg: $load_avg | Free Mem: $free_mem | Disk use: $disk_usege" >> "$LOG_FILE"
-	counter=$((counter + 1))
-	if [ $counter -le 10 ]; then
-		sleep 5
-	fi
+while (($#)); do
+    case "$1" in
+        --count)
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
+            COUNT=$2
+            shift 2
+            ;;
+        --interval)
+            [[ $# -ge 2 ]] || {
+                usage >&2
+                exit 2
+            }
+            INTERVAL=$2
+            shift 2
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
 done
+
+[[ -n "$TECHFLOW_HOME" && -f "$TECHFLOW_HOME/.techflow-workspace" ]] || {
+    echo "TECHFLOW_HOME must point to an initialized training workspace" >&2
+    exit 2
+}
+[[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || {
+    echo "--count must be a positive integer" >&2
+    exit 2
+}
+[[ "$INTERVAL" =~ ^[0-9]+([.][0-9]+)?$ ]] || {
+    echo "--interval must be non-negative" >&2
+    exit 2
+}
+
+LOG_FILE="$TECHFLOW_HOME/logs/monitor.log"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+for ((counter = 1; counter <= COUNT; counter++)); do
+    timestamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    load_avg=$(awk '{print $1}' /proc/loadavg)
+    available_mem=$(free -h | awk '/^Mem:/ {print $7}')
+    disk_usage=$(df -P "$TECHFLOW_HOME" | awk 'NR==2 {print $5}')
+    printf '[%s] Load Avg: %s | Available Mem: %s | Disk Use: %s\n' \
+        "$timestamp" "$load_avg" "$available_mem" "$disk_usage" >> "$LOG_FILE"
+    ((counter < COUNT)) && sleep "$INTERVAL"
+done
+
+echo "Wrote $COUNT samples to $LOG_FILE"

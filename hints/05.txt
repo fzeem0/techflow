@@ -1,0 +1,2 @@
+The provided start and stop scripts maintain `$TECHFLOW_HOME/app/server.pid`.
+Inspect exactly that PID; broad process-name matches can select unrelated jobs.

@@ -1,0 +1,2 @@
+Capture command output with a grouped block: `{ uname -a; free -h; df -hT; } > report`.
+Use `/proc/loadavg` if localized `uptime` output is difficult to parse.

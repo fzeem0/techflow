@@ -1,0 +1,2 @@
+Use `du -ah "$TECHFLOW_HOME" | sort -h | tail`. Archive with `tar -czf` and
+check modes with `stat -c '%a'`. Quote every workspace path.

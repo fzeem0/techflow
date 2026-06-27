@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$PROJECT_ROOT"
+
+if [[ -w /workspace ]]; then
+    TECHFLOW_TEST_TMPDIR=/workspace/.test-tmp
+else
+    TECHFLOW_TEST_TMPDIR=/tmp/techflow-tests
+fi
+export TECHFLOW_TEST_TMPDIR
+mkdir -p "$TECHFLOW_TEST_TMPDIR"
+
+mapfile -t shell_files < <(
+    find bin docker scripts -type f \
+        ! -name '*.py' \
+        -print |
+        sort
+)
+shell_files+=(tf tests/integration.sh)
+
+echo "==> Bash syntax"
+bash -n "${shell_files[@]}"
+
+echo "==> ShellCheck"
+shellcheck --severity=warning "${shell_files[@]}"
+
+echo "==> shfmt"
+shfmt -d -i 4 -ci -sr "${shell_files[@]}"
+
+echo "==> Python unit tests"
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+echo "==> CLI behavior tests"
+bats tests/cli.bats
+
+echo "==> Mission integration test"
+tests/integration.sh
+
+echo "All tests passed."

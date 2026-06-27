@@ -1,0 +1,2 @@
+For access.log, the IP is field 1, URL field 7 and status field 9. A useful
+frequency pipeline is `sort | uniq -c | sort -rn`.
