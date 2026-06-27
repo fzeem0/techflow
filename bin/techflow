@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+PROJECT_ROOT=${TECHFLOW_PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 TECHFLOW_HOME=${TECHFLOW_HOME:-}
 MISSION_DIR="$PROJECT_ROOT/missions"
 HINT_DIR="$PROJECT_ROOT/hints"
